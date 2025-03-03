@@ -6,21 +6,23 @@ import { randomBytes } from "crypto"
 import { IIpcHandlerDeps } from "./main"
 
 export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
-  console.log("Initializing IPC handlers")
+  console.log("初始化 IPC 处理程序")
 
-  // Credits handlers
+  // 积分处理程序 (Credits handlers)
   ipcMain.handle("set-initial-credits", async (_event, credits: number) => {
     const mainWindow = deps.getMainWindow()
     if (!mainWindow) return
 
     try {
-      // Set the credits in a way that ensures atomicity
+      // 以确保原子性的方式设置积分
       await mainWindow.webContents.executeJavaScript(
         `window.__CREDITS__ = ${credits}`
-      )
+
+)
       mainWindow.webContents.send("credits-updated", credits)
+      console.log(`初始积分已设置: ${credits}`)
     } catch (error) {
-      console.error("Error setting initial credits:", error)
+      console.error("设置初始积分时出错:", error)
       throw error
     }
   })
@@ -39,13 +41,14 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
           `window.__CREDITS__ = ${newCredits}`
         )
         mainWindow.webContents.send("credits-updated", newCredits)
+        console.log(`积分已减少: ${currentCredits} -> ${newCredits}`)
       }
     } catch (error) {
-      console.error("Error decrementing credits:", error)
+      console.error("减少积分时出错:", error)
     }
   })
 
-  // Screenshot queue handlers
+  // 截图队列处理程序 (Screenshot queue handlers)
   ipcMain.handle("get-screenshot-queue", () => {
     return deps.getScreenshotQueue()
   })
@@ -55,6 +58,7 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
   })
 
   ipcMain.handle("delete-screenshot", async (event, path: string) => {
+    console.log(`删除截图: ${path}`)
     return deps.deleteScreenshot(path)
   })
 
@@ -62,16 +66,18 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
     return deps.getImagePreview(path)
   })
 
-  // Screenshot processing handlers
+  // 截图处理程序 (Screenshot processing handlers)
   ipcMain.handle("process-screenshots", async () => {
+    console.log("开始处理截图队列")
     await deps.processingHelper?.processScreenshots()
   })
 
-  // Window dimension handlers
+  // 窗口尺寸处理程序 (Window dimension handlers)
   ipcMain.handle(
     "update-content-dimensions",
     async (event, { width, height }: { width: number; height: number }) => {
       if (width && height) {
+        console.log(`更新内容尺寸: ${width}x${height}`)
         deps.setWindowDimensions(width, height)
       }
     }
@@ -80,15 +86,17 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
   ipcMain.handle(
     "set-window-dimensions",
     (event, width: number, height: number) => {
+      console.log(`设置窗口尺寸: ${width}x${height}`)
       deps.setWindowDimensions(width, height)
     }
   )
 
-  // Screenshot management handlers
+  // 截图管理处理程序 (Screenshot management handlers)
   ipcMain.handle("get-screenshots", async () => {
     try {
       let previews = []
       const currentView = deps.getView()
+      console.log(`获取截图预览 (当前视图: ${currentView})`)
 
       if (currentView === "queue") {
         const queue = deps.getScreenshotQueue()
@@ -108,14 +116,15 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
         )
       }
 
+      console.log(`已获取 ${previews.length} 张截图预览`)
       return previews
     } catch (error) {
-      console.error("Error getting screenshots:", error)
+      console.error("获取截图时出错:", error)
       throw error
     }
   })
 
-  // Screenshot trigger handlers
+// 截图触发处理程序 (Screenshot trigger handlers)
   ipcMain.handle("trigger-screenshot", async () => {
     const mainWindow = deps.getMainWindow()
     if (mainWindow) {
@@ -126,13 +135,14 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
           path: screenshotPath,
           preview
         })
+        console.info("触发截图成功")
         return { success: true }
       } catch (error) {
-        console.error("Error triggering screenshot:", error)
-        return { error: "Failed to trigger screenshot" }
+        console.error("触发截图时出错:", error)
+        return { error: "无法触发截图" }
       }
     }
-    return { error: "No main window available" }
+    return { error: "主窗口不可用" }
   })
 
   ipcMain.handle("take-screenshot", async () => {
@@ -141,12 +151,12 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
       const preview = await deps.getImagePreview(screenshotPath)
       return { path: screenshotPath, preview }
     } catch (error) {
-      console.error("Error taking screenshot:", error)
-      return { error: "Failed to take screenshot" }
+      console.error("截图时出错:", error)
+      return { error: "无法获取截图" }
     }
   })
 
-  // Auth related handlers
+  // 认证相关处理程序 (Auth related handlers)
   ipcMain.handle("get-pkce-verifier", () => {
     return randomBytes(32).toString("base64url")
   })
@@ -155,7 +165,7 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
     shell.openExternal(url)
   })
 
-  // Subscription handlers
+  // 订阅处理程序 (Subscription handlers)
   ipcMain.handle("open-settings-portal", () => {
     shell.openExternal("https://www.interviewcoder.co/settings")
   })
@@ -165,25 +175,25 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
       await shell.openExternal(url)
       return { success: true }
     } catch (error) {
-      console.error("Error opening checkout page:", error)
+      console.error("打开结账页面时出错:", error)
       return {
         success: false,
         error:
           error instanceof Error
             ? error.message
-            : "Failed to open checkout page"
+            : "无法打开结账页面"
       }
     }
   })
 
-  // Window management handlers
+  // 窗口管理处理程序 (Window management handlers)
   ipcMain.handle("toggle-window", () => {
     try {
       deps.toggleMainWindow()
       return { success: true }
     } catch (error) {
-      console.error("Error toggling window:", error)
-      return { error: "Failed to toggle window" }
+      console.error("切换窗口时出错:", error)
+      return { error: "无法切换窗口" }
     }
   })
 
@@ -192,57 +202,57 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
       deps.clearQueues()
       return { success: true }
     } catch (error) {
-      console.error("Error resetting queues:", error)
-      return { error: "Failed to reset queues" }
+      console.error("重置队列时出错:", error)
+      return { error: "无法重置队列" }
     }
   })
 
-  // Process screenshot handlers
+  // 处理截图处理程序 (Process screenshot handlers)
   ipcMain.handle("trigger-process-screenshots", async () => {
     try {
       await deps.processingHelper?.processScreenshots()
       return { success: true }
     } catch (error) {
-      console.error("Error processing screenshots:", error)
-      return { error: "Failed to process screenshots" }
+      console.error("处理截图时出错:", error)
+      return { error: "无法处理截图" }
     }
   })
 
-  // Reset handlers
+  // 重置处理程序 (Reset handlers)
   ipcMain.handle("trigger-reset", () => {
     try {
-      // First cancel any ongoing requests
+      // 首先取消任何正在进行的请求
       deps.processingHelper?.cancelOngoingRequests()
 
-      // Clear all queues immediately
+      // 立即清除所有队列
       deps.clearQueues()
 
-      // Reset view to queue
+      // 重置视图到队列
       deps.setView("queue")
 
-      // Get main window and send reset events
+      // 获取主窗口并发送重置事件
       const mainWindow = deps.getMainWindow()
       if (mainWindow && !mainWindow.isDestroyed()) {
-        // Send reset events in sequence
+        // 按顺序发送重置事件
         mainWindow.webContents.send("reset-view")
         mainWindow.webContents.send("reset")
       }
 
       return { success: true }
     } catch (error) {
-      console.error("Error triggering reset:", error)
-      return { error: "Failed to trigger reset" }
+      console.error("触发重置时出错:", error)
+      return { error: "无法触发重置" }
     }
   })
 
-  // Window movement handlers
+  // 窗口移动处理程序 (Window movement handlers)
   ipcMain.handle("trigger-move-left", () => {
     try {
       deps.moveWindowLeft()
       return { success: true }
     } catch (error) {
-      console.error("Error moving window left:", error)
-      return { error: "Failed to move window left" }
+      console.error("向左移动窗口时出错:", error)
+      return { error: "无法向左移动窗口" }
     }
   })
 
@@ -251,8 +261,8 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
       deps.moveWindowRight()
       return { success: true }
     } catch (error) {
-      console.error("Error moving window right:", error)
-      return { error: "Failed to move window right" }
+      console.error("向右移动窗口时出错:", error)
+      return { error: "无法向右移动窗口" }
     }
   })
 
@@ -261,8 +271,8 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
       deps.moveWindowUp()
       return { success: true }
     } catch (error) {
-      console.error("Error moving window up:", error)
-      return { error: "Failed to move window up" }
+      console.error("向上移动窗口时出错:", error)
+      return { error: "无法向上移动窗口" }
     }
   })
 
@@ -271,8 +281,8 @@ export function initializeIpcHandlers(deps: IIpcHandlerDeps): void {
       deps.moveWindowDown()
       return { success: true }
     } catch (error) {
-      console.error("Error moving window down:", error)
-      return { error: "Failed to move window down" }
+      console.error("向下移动窗口时出错:", error)
+      return { error: "无法向下移动窗口" }
     }
   })
 }

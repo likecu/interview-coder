@@ -10,26 +10,27 @@ import { promisify } from "util"
 const execFileAsync = promisify(execFile)
 
 export class ScreenshotHelper {
-  private screenshotQueue: string[] = []
-  private extraScreenshotQueue: string[] = []
-  private readonly MAX_SCREENSHOTS = 2
 
-  private readonly screenshotDir: string
-  private readonly extraScreenshotDir: string
+private screenshotQueue: string[] = [] // 主截图队列
+  private extraScreenshotQueue: string[] = [] // 额外截图队列
+  private readonly MAX_SCREENSHOTS = 2 // 每个队列最大保存的截图数量
 
-  private view: "queue" | "solutions" | "debug" = "queue"
+  private readonly screenshotDir: string // 主截图存储目录
+  private readonly extraScreenshotDir: string // 额外截图存储目录
+
+  private view: "queue" | "solutions" | "debug" = "queue" // 当前视图模式
 
   constructor(view: "queue" | "solutions" | "debug" = "queue") {
     this.view = view
 
-    // Initialize directories
+    // 初始化目录
     this.screenshotDir = path.join(app.getPath("userData"), "screenshots")
     this.extraScreenshotDir = path.join(
       app.getPath("userData"),
       "extra_screenshots"
     )
 
-    // Create directories if they don't exist
+    // 如果目录不存在则创建
     if (!fs.existsSync(this.screenshotDir)) {
       fs.mkdirSync(this.screenshotDir)
     }
@@ -63,7 +64,7 @@ export class ScreenshotHelper {
   }
 
   public clearQueues(): void {
-    // Clear screenshotQueue
+    // 清除主截图队列
     this.screenshotQueue.forEach((screenshotPath) => {
       fs.unlink(screenshotPath, (err) => {
         if (err)
@@ -72,7 +73,7 @@ export class ScreenshotHelper {
     })
     this.screenshotQueue = []
 
-    // Clear extraScreenshotQueue
+    // 清除额外截图队列
     this.extraScreenshotQueue.forEach((screenshotPath) => {
       fs.unlink(screenshotPath, (err) => {
         if (err)
@@ -94,7 +95,7 @@ export class ScreenshotHelper {
   }
 
   private async captureScreenshotWindows(): Promise<Buffer> {
-    // Using PowerShell's native screenshot capability
+    // 使用PowerShell的原生截图功能
     const tmpPath = path.join(app.getPath("temp"), `${uuidv4()}.png`)
     const script = `
       Add-Type -AssemblyName System.Windows.Forms
@@ -123,13 +124,13 @@ export class ScreenshotHelper {
 
     let screenshotPath = ""
     try {
-      // Get screenshot buffer using native methods
+      // 使用原生方法获取截图缓冲区
       const screenshotBuffer =
         process.platform === "darwin"
           ? await this.captureScreenshotMac()
           : await this.captureScreenshotWindows()
 
-      // Save and manage the screenshot based on current view
+      // 根据当前视图模式保存和管理截图
       if (this.view === "queue") {
         screenshotPath = path.join(this.screenshotDir, `${uuidv4()}.png`)
         await fs.promises.writeFile(screenshotPath, screenshotBuffer)
@@ -150,7 +151,7 @@ export class ScreenshotHelper {
           }
         }
       } else {
-        // In solutions view, only add to extra queue
+        // 在解决方案视图中，仅添加到额外队列
         screenshotPath = path.join(this.extraScreenshotDir, `${uuidv4()}.png`)
         await fs.promises.writeFile(screenshotPath, screenshotBuffer)
         console.log("Adding screenshot to extra queue:", screenshotPath)
@@ -203,7 +204,8 @@ export class ScreenshotHelper {
       } else {
         this.extraScreenshotQueue = this.extraScreenshotQueue.filter(
           (filePath) => filePath !== path
-        )
+
+)
       }
       return { success: true }
     } catch (error) {
@@ -213,7 +215,7 @@ export class ScreenshotHelper {
   }
 
   public clearExtraScreenshotQueue(): void {
-    // Clear extraScreenshotQueue
+    // 清除额外截图队列
     this.extraScreenshotQueue.forEach((screenshotPath) => {
       fs.unlink(screenshotPath, (err) => {
         if (err)

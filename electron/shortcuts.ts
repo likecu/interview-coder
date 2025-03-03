@@ -1,14 +1,18 @@
-import { globalShortcut, app } from "electron"
-import { IShortcutsHelperDeps } from "./main"
+import{globalShortcut, app}from "electron"
+import {IShortcutsHelperDeps }from "./main"
 
+// 快捷键助手类，用于管理全局快捷键
 export class ShortcutsHelper {
-  private deps: IShortcutsHelperDeps
+
+private deps: IShortcutsHelperDeps
 
   constructor(deps: IShortcutsHelperDeps) {
     this.deps = deps
   }
 
+  // 注册全局快捷键
   public registerGlobalShortcuts(): void {
+    // 快捷键：CommandOrControl+H - 截图
     globalShortcut.register("CommandOrControl+H", async () => {
       const mainWindow = this.deps.getMainWindow()
       if (mainWindow) {
@@ -26,27 +30,29 @@ export class ShortcutsHelper {
       }
     })
 
+    // 快捷键：CommandOrControl+Enter - 处理截图队列
     globalShortcut.register("CommandOrControl+Enter", async () => {
       await this.deps.processingHelper?.processScreenshots()
     })
 
+    // 快捷键：CommandOrControl+R - 取消请求并重置队列
     globalShortcut.register("CommandOrControl+R", () => {
       console.log(
         "Command + R pressed. Canceling requests and resetting queues..."
       )
 
-      // Cancel ongoing API requests
+      // 取消正在进行的API请求
       this.deps.processingHelper?.cancelOngoingRequests()
 
-      // Clear both screenshot queues
+      // 清除所有截图队列
       this.deps.clearQueues()
 
       console.log("Cleared queues.")
 
-      // Update the view state to 'queue'
+      // 更新视图状态为'queue'
       this.deps.setView("queue")
 
-      // Notify renderer process to switch view to 'queue'
+      // 通知渲染进程切换视图到'queue'
       const mainWindow = this.deps.getMainWindow()
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send("reset-view")
@@ -54,7 +60,7 @@ export class ShortcutsHelper {
       }
     })
 
-    // New shortcuts for moving the window
+    // 窗口移动快捷键
     globalShortcut.register("CommandOrControl+Left", () => {
       console.log("Command/Ctrl + Left pressed. Moving window left.")
       this.deps.moveWindowLeft()
@@ -75,11 +81,12 @@ export class ShortcutsHelper {
       this.deps.moveWindowUp()
     })
 
+    // 快捷键：CommandOrControl+B - 切换主窗口显示/隐藏
     globalShortcut.register("CommandOrControl+B", () => {
       this.deps.toggleMainWindow()
     })
 
-    // Unregister shortcuts when quitting
+    // 应用退出时注销所有快捷键
     app.on("will-quit", () => {
       globalShortcut.unregisterAll()
     })
